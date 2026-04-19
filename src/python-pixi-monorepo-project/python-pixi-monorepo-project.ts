@@ -1,4 +1,151 @@
-import { cdk, SampleDir, TextFile, YamlFile } from "projen";
+import { Component, IniFile, SampleDir, Task, TomlFile, YamlFile, TextFile } from "projen";
+import { NodeProject } from "projen/lib/javascript";
+
+/**
+ * Options for a Pixi package.
+ */
+export interface PixiPackageOptions {
+  /**
+   * Name of the package (used for directory name and Python package name).
+   */
+  readonly name: string;
+
+  /**
+   * Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores.
+   */
+  readonly pythonPackage?: string;
+
+  /**
+   * Package description.
+   */
+  readonly description?: string;
+
+  /**
+   * Additional Python dependencies (for setup.cfg install_requires).
+   */
+  readonly installRequires?: string[];
+
+  /**
+   * Additional content to generate in the src/ directory.
+   */
+  readonly sampleSrcFiles?: Record<string, string>;
+}
+
+/**
+ * A component that generates files for a single Pixi package.
+ */
+export class PixiPackage extends Component {
+  public readonly packageName: string;
+  public readonly pythonPackage: string;
+
+  constructor(project: NodeProject, options: PixiPackageOptions) {
+    super(project);
+
+    this.packageName = options.name;
+    this.pythonPackage = options.pythonPackage ?? this.packageName.replace(/-/g, '_');
+
+    const pkgPath = `packages/${this.packageName}`;
+
+    // .envrc
+    new TextFile(project, `${pkgPath}/.envrc`, {
+      lines: [
+        "watch_file ../../pixi.lock",
+        "",
+        `PIXI_ENV="${PIXI_ENV:-${this.pythonPackage}}"`,
+        "",
+        "source_env_if_exists .envrc.local",
+        "",
+        'echo "Activating package pixi environment: $PIXI_ENV"',
+        'eval "$(pixi shell-hook --environment "$PIXI_ENV" --manifest-path ../.. --frozen)"',
+      ],
+    });
+
+    // pixi.toml
+    new TomlFile(project, `${pkgPath}/pixi.toml`, {
+      obj: {
+        workspace: {
+          channels: ['conda-forge'],
+          platforms: ['linux-64', 'osx-64', 'osx-arm64', 'win-64'],
+          preview: ['pixi-build'],
+        },
+        package: {
+          name: this.pythonPackage,
+          version: '0.1.0',
+        },
+        'package.build': {
+          backend: { name: 'pixi-build-python', version: '0.*' },
+        },
+        'package.host-dependencies': {
+          setuptools: '>=70.0.0',
+        },
+      },
+    });
+
+    // pyproject.toml
+    new TomlFile(project, `${pkgPath}/pyproject.toml`, {
+      obj: {
+        'build-system': {
+          requires: ['setuptools>=70.0.0', 'wheel'],
+          'build-backend': 'setuptools.build_meta',
+        },
+      },
+    });
+
+    // setup.cfg
+    new IniFile(project, `${pkgPath}/setup.cfg`, {
+      obj: {
+        metadata: {
+          name: this.pythonPackage,
+          description: options.description ?? `${this.packageName} package`,
+          version: '0.1.0',
+          author: 'DeadlySquad13',
+          license: 'MIT',
+          license_file: 'LICENSE',
+          platforms: 'unix, linux, osx, cygwin, win32',
+          classifiers: ['Programming Language :: Python :: 3.14.0'],
+        },
+        options: {
+          packages: 'find:',
+          install_requires: (options.installRequires ?? []).join('\n'),
+          python_requires: '>=3.14',
+          package_dir: '=src',
+          zip_safe: 'no',
+        },
+        'options.packages.find': {
+          where: 'src',
+        },
+        'options.package_data': {
+          find: 'py.typed',
+        },
+        flake8: {
+          'max-line-length': '100',
+        },
+      },
+    });
+
+    // Sample source files (customizable)
+    const srcFiles = options.sampleSrcFiles ?? {
+      '__init__.py': '',
+      'main.py': `def hello():\n    return "Hello from ${this.packageName}"\n`,
+    };
+    new SampleDir(project, `${pkgPath}/src/${this.pythonPackage}`, {
+      files: srcFiles,
+    });
+
+    // Tests
+    new SampleDir(project, `${pkgPath}/tests`, {
+      files: {
+        '__init__.py': '',
+        'test_main.py': `from ${this.pythonPackage}.main import hello\n\ndef test_hello():\n    assert hello() == "Hello from ${this.packageName}"\n`,
+      },
+    });
+
+    // .gitignore for package
+    new TextFile(project, `${pkgPath}/.gitignore`, {
+      lines: ['__pycache__/', '*.pyc', '.envrc.local'],
+    });
+  }
+}
 
 /**
  * Configurable knobs for Python Pixi Monorepo Project.
@@ -18,445 +165,247 @@ export interface PythonPixiMonorepoProjectOptions
  *
  */
 export class PythonPixiMonorepo extends cdk.JsiiProject {
+  private readonly rootPixiToml: TomlFile;
+
   constructor(options: PythonPixiMonorepoProjectOptions) {
     super({
       ...options,
-      readme: {
-        filename: "README.md",
-        contents: "# Python Monorepo",
-      },
-      defaultReleaseBranch: "main",
+      readme: { filename: 'README.md', contents: '# Python Monorepo' },
+      defaultReleaseBranch: 'main',
       gitpod: true,
       releaseToNpm: false,
     });
 
-    this.setupMonorepoStructure();
-  }
-
-  private setupMonorepoStructure() {
-    // ---- Root configuration files ----
-    new TextFile(this, ".editorconfig", {
-      lines: [
-        "root = true",
-        "",
-        "[*]",
-        "end_of_line = lf",
-        "insert_final_newline = true",
-        "charset = utf-8",
-        "indent_style = space",
-        "indent_size = 2",
-      ],
-    });
-
-    new TextFile(this, ".env.dev.example", {
-      lines: ["# Development environment variables", "FOO=bar"],
-    });
-
-    new TextFile(this, ".envrc", {
-      lines: [
-        "watch_file pixi.lock",
-        "",
-        'PIXI_ENV="${PIXI_ENV:-default}"',
-        "",
-        "source_env_if_exists .envrc.local",
-        "",
-        'echo "Activating workspace pixi environment: $PIXI_ENV"',
-        'eval "$(pixi shell-hook --environment "$PIXI_ENV" --frozen)"',
-      ],
-    });
-
-    // new TextFile(this, ".gitattributes", {
-    //   lines: ["* text=auto", "*.lock binary"],
-    // });
-
-    // .gitignore is usually handled by GitignoreFile component; add custom entries if needed.
-    this.gitignore?.addPatterns(".envrc.local", ".env.dev", "*.pyc");
-
-    new YamlFile(this, ".gitlab-ci.yml", {
+    // Root configuration files using proper primitives
+    new IniFile(this, '.editorconfig', {
       obj: {
-        stages: ["test", "build"],
-        test: {
-          stage: "test",
-          script: ["pixi run test"],
+        root: true,
+        '*': {
+          end_of_line: 'lf',
+          insert_final_newline: true,
+          charset: 'utf-8',
+          indent_style: 'space',
+          indent_size: 2,
         },
       },
     });
 
-    new TextFile(this, ".nvim.lua", {
-      lines: [
-        "-- Neovim configuration for this project",
-        "vim.opt.expandtab = true",
-      ],
+    new YamlFile(this, '.gitlab-ci.yml', {
+      obj: {
+        stages: ['test', 'build'],
+        test: { stage: 'test', script: ['pixi run test'] },
+      },
     });
 
-    new YamlFile(this, ".pre-commit-config.yaml", {
+    new YamlFile(this, '.pre-commit-config.yaml', {
       obj: {
         repos: [
           {
-            repo: "https://github.com/pre-commit/pre-commit-hooks",
-            rev: "v4.5.0",
-            hooks: [{ id: "trailing-whitespace" }, { id: "end-of-file-fixer" }],
+            repo: 'https://github.com/pre-commit/pre-commit-hooks',
+            rev: 'v4.5.0',
+            hooks: [{ id: 'trailing-whitespace' }, { id: 'end-of-file-fixer' }],
           },
         ],
       },
     });
 
-    new TextFile(this, "CONTRIBUTING.md", {
-      lines: ["# Contributing", "Guidelines coming soon."],
+    new IniFile(this, 'mypy.ini', {
+      obj: {
+        mypy: {
+          python_version: '3.14',
+          warn_return_any: true,
+          warn_unused_configs: true,
+        },
+      },
     });
 
-    new TextFile(this, "Dockerfile", {
+    new IniFile(this, 'pytest.ini', {
+      obj: {
+        pytest: {
+          testpaths: 'packages/*/tests',
+          python_files: 'test_*.py',
+          python_classes: 'Test*',
+          python_functions: 'test_*',
+        },
+      },
+    });
+
+    // Root pixi.toml (workspace)
+    this.rootPixiToml = new TomlFile(this, 'pixi.toml', {
+      obj: {
+        workspace: {
+          channels: ['conda-forge'],
+          platforms: ['linux-64', 'osx-64', 'osx-arm64', 'win-64'],
+          preview: ['pixi-build'],
+        },
+        'workspace.package': {
+          authors: ['DeadlySquad13'],
+          license: 'MIT',
+        },
+        'workspace.tasks': {
+          test: 'pytest',
+          lint: 'pre-commit run --all-files',
+        },
+        'workspace.dependencies': {
+          python: '3.14.*',
+          pytest: '>=7.0.0,<9',
+        },
+        feature: {},
+        environment: {},
+      },
+    });
+
+    // Other root files
+    new TextFile(this, '.env.dev.example', {
+      lines: ['# Development environment variables', 'FOO=bar'],
+    });
+
+    new TextFile(this, '.envrc', {
       lines: [
-        "FROM ghcr.io/prefix-dev/pixi:latest",
-        "WORKDIR /app",
-        "COPY . .",
-        "RUN pixi install",
+        'watch_file pixi.lock',
+        '',
+        'PIXI_ENV="${PIXI_ENV:-default}"',
+        '',
+        'source_env_if_exists .envrc.local',
+        '',
+        'echo "Activating workspace pixi environment: $PIXI_ENV"',
+        'eval "$(pixi shell-hook --environment "$PIXI_ENV" --frozen)"',
       ],
     });
 
-    new TextFile(this, "Dockerfile.ci", {
-      lines: [
-        "FROM ghcr.io/prefix-dev/pixi:latest",
-        "WORKDIR /app",
-        "COPY . .",
-        "RUN pixi install && pixi run lint && pixi run test",
-      ],
+    new TextFile(this, '.gitattributes', {
+      lines: ['* text=auto', '*.lock binary'],
     });
 
-    new TextFile(this, "Makefile", {
+    new TextFile(this, '.nvim.lua', {
+      lines: ['-- Neovim configuration for this project', 'vim.opt.expandtab = true'],
+    });
+
+    new TextFile(this, 'CONTRIBUTING.md', {
+      lines: ['# Contributing', 'Guidelines coming soon.'],
+    });
+
+    new TextFile(this, 'Dockerfile', {
+      lines: ['FROM ghcr.io/prefix-dev/pixi:latest', 'WORKDIR /app', 'COPY . .', 'RUN pixi install'],
+    });
+
+    new TextFile(this, 'Dockerfile.ci', {
+      lines: ['FROM ghcr.io/prefix-dev/pixi:latest', 'WORKDIR /app', 'COPY . .', 'RUN pixi install && pixi run lint && pixi run test'],
+    });
+
+    new TextFile(this, 'Makefile', {
       lines: [
-        ".PHONY: help install test lint",
-        "help:",
+        '.PHONY: help install test lint',
+        'help:',
         '\t@echo "Available commands:"',
         '\t@echo "  make install   - Install dependencies with pixi"',
         '\t@echo "  make test      - Run tests"',
         '\t@echo "  make lint      - Run linters"',
-        "install:",
-        "\tpixi install",
-        "test:",
-        "\tpixi run test",
-        "lint:",
-        "\tpixi run lint",
+        'install:',
+        '\tpixi install',
+        'test:',
+        '\tpixi run test',
+        'lint:',
+        '\tpixi run lint',
       ],
     });
 
-    new TextFile(this, "Makefile.pkg", {
-      lines: ["# Additional package-specific make targets"],
+    new TextFile(this, 'Makefile.pkg', {
+      lines: ['# Additional package-specific make targets'],
     });
 
-    // LICENSE is already generated by JsiiProject (if options.licensed is true).
-
-    // README.md is already set in super().
-
-    new TextFile(this, "docs/.gitignore", {
-      lines: ["_build/", "*.pyc"],
+    new TextFile(this, 'docs/.gitignore', {
+      lines: ['_build/', '*.pyc'],
     });
 
-    new TextFile(this, "make.bat", {
-      lines: ["@echo off", "pixi run %*"],
+    new TextFile(this, 'make.bat', {
+      lines: ['@echo off', 'pixi run %*'],
     });
 
-    new TextFile(this, "mypy.ini", {
-      lines: [
-        "[mypy]",
-        "python_version = 3.14",
-        "warn_return_any = True",
-        "warn_unused_configs = True",
-      ],
-    });
-
-    // Root pixi.toml (workspace) ----
-    new TextFile(this, "pixi.toml", {
-      lines: [
-        "[workspace]",
-        'channels = ["conda-forge"]',
-        'platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]',
-        'preview = ["pixi-build"]',
-        "",
-        "[workspace.package]",
-        'authors = ["DeadlySquad13"]',
-        'license = "MIT"',
-        "",
-        "[workspace.tasks]",
-        'test = "pytest"',
-        'lint = "pre-commit run --all-files"',
-        "",
-        "[workspace.dependencies]",
-        'python = "3.14.*"',
-        'pytest = ">=7.0.0,<9"',
-      ],
-    });
-
-    // Root pixi.lock is created by the user running `pixi install`; we can add an empty placeholder or omit it.
-
-    new TextFile(this, "pytest.ini", {
-      lines: [
-        "[pytest]",
-        "testpaths = packages/*/tests",
-        "python_files = test_*.py",
-        "python_classes = Test*",
-        "python_functions = test_*",
-      ],
-    });
-
-    // Sphinx source files (optional)
-    new TextFile(this, "source/conf.py", {
-      lines: ["# Sphinx configuration file"],
-    });
-    new TextFile(this, "source/index.rst", {
-      lines: ["Welcome to the documentation", "============================"],
-    });
-
-    // ---- Create the two packages ----
-    this.createCommonPackage();
-    this.createLoggingPackage();
-  }
-
-  private createCommonPackage() {
-    const pkgPath = "packages/common";
-
-    // .envrc
-    new TextFile(this, `${pkgPath}/.envrc`, {
-      lines: [
-        "watch_file ../../pixi.lock",
-        "",
-        'PIXI_ENV="${PIXI_ENV:-dsomega_common}"',
-        "",
-        "source_env_if_exists .envrc.local",
-        "",
-        'echo "Activating package pixi environment: $PIXI_ENV"',
-        'eval "$(pixi shell-hook --environment "$PIXI_ENV" --manifest-path ../.. --frozen)"',
-      ],
-    });
-
-    // pixi.toml
-    new TextFile(this, `${pkgPath}/pixi.toml`, {
-      lines: [
-        "[workspace]",
-        'channels = ["conda-forge"]',
-        'platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]',
-        'preview = ["pixi-build"]',
-        "",
-        "[package]",
-        'name = "dsomega_common"',
-        'version = "0.1.0"',
-        "",
-        "[package.build]",
-        'backend = { name = "pixi-build-python", version = "0.*" }',
-        "",
-        "[package.host-dependencies]",
-        'setuptools = ">=70.0.0"',
-      ],
-    });
-
-    // pyproject.toml
-    new TextFile(this, `${pkgPath}/pyproject.toml`, {
-      lines: [
-        "[build-system]",
-        'requires = ["setuptools>=70.0.0", "wheel"]',
-        'build-backend = "setuptools.build_meta"',
-      ],
-    });
-
-    // setup.cfg
-    new TextFile(this, `${pkgPath}/setup.cfg`, {
-      lines: [
-        "[metadata]",
-        "name = dsomega_common",
-        "description = Python_lib, dsomega_common utils",
-        "version = 0.1.0",
-        "author = DeadlySquad13",
-        "license = MIT",
-        "license_file = LICENSE",
-        "platforms = unix, linux, osx, cygwin, win32",
-        "classifiers =",
-        "    Programming Language :: Python :: 3.14.0",
-        "",
-        "[options]",
-        "packages = find:",
-        "install_requires =",
-        "python_requires = >=3.14",
-        "package_dir =",
-        "    =src",
-        "zip_safe = no",
-        "",
-        "[options.packages.find]",
-        "where=src",
-        "",
-        "[options.package_data]",
-        "find = py.typed",
-        "",
-        "[flake8]",
-        "max-line-length = 100",
-      ],
-    });
-
-    // Source files
-    new SampleDir(this, `${pkgPath}/src/hello_world`, {
-      files: {
-        "__init__.py": "",
-        "main.py": [
-          "import logging",
-          "from rich.logging import RichHandler",
-          "",
-          "def hello_world():",
-          '    """Generate a greeting message.',
-          "",
-          "    This function returns a simple greeting string that can be used",
-          "    as a starting point for the application.",
-          "",
-          "    :return: A greeting message string",
-          "    :rtype: str",
-          '    """',
-          '    log = logging.getLogger("test")',
-          "    log.addHandler(RichHandler())",
-          '    log.info("test")',
-          "    return 'Hello World!'",
-          "",
-          "",
-          'if __name__ == "__main__":',
-          "    result = hello_world()",
-          "    print(result)",
-        ].join("\n"),
+    // Create an initial example package
+    this.addPackage('common', {
+      description: 'Common utilities',
+      installRequires: ['tqdm>=4.67.3,<5'],
+      sampleSrcFiles: {
+        '__init__.py': '',
+        'main.py': `import logging\nfrom rich.logging import RichHandler\n\ndef hello_world():\n    logging.basicConfig(level=logging.INFO, handlers=[RichHandler()])\n    logging.info("Hello from common")\n    return "Hello World!"\n`,
       },
     });
 
-    // Tests
-    new SampleDir(this, `${pkgPath}/tests`, {
-      files: {
-        "__init__.py": "",
-        "test_hello_world.py": [
-          "from hello_world.main import hello_world",
-          "",
-          "",
-          "def test_hellow_world():",
-          '    assert hello_world() == "Hello World!"',
-        ].join("\n"),
-      },
+    // Add a task to add new packages
+    const addPackageTask = this.addTask('add-package', {
+      description: 'Add a new Python package to the monorepo',
+      exec: 'node scripts/add-package.js',
+      receiveArgs: true,
+    });
+
+    // Create the script file
+    new TextFile(this, 'scripts/add-package.js', {
+      lines: [
+        '#!/usr/bin/env node',
+        "const { PythonPixiMonorepo } = require('../lib');",
+        '// This is a placeholder; actual implementation would need to',
+        '// instantiate the project and call addPackage() with process.argv',
+        'console.log("Add package:", process.argv.slice(2).join(" "));',
+      ],
+      executable: true,
     });
   }
 
-  private createLoggingPackage() {
-    const pkgPath = "packages/logging";
-
-    // .envrc
-    new TextFile(this, `${pkgPath}/.envrc`, {
-      lines: [
-        "watch_file ../../pixi.lock",
-        "",
-        'PIXI_ENV="${PIXI_ENV:-dsomega_logging}"',
-        "",
-        "source_env_if_exists .envrc.local",
-        "",
-        'echo "Activating package pixi environment: $PIXI_ENV"',
-        'eval "$(pixi shell-hook --environment "$PIXI_ENV" --manifest-path ../.. --frozen)"',
-      ],
+  /**
+   * Add a new package to the monorepo and update the root pixi.toml.
+   */
+  public addPackage(name: string, options?: Partial<PixiPackageOptions>): PixiPackage {
+    const pkg = new PixiPackage(this, {
+      name,
+      pythonPackage: options?.pythonPackage,
+      description: options?.description,
+      installRequires: options?.installRequires,
+      sampleSrcFiles: options?.sampleSrcFiles,
     });
 
-    // // .gitattributes
-    // new TextFile(this, `${pkgPath}/.gitattributes`, {
-    //   lines: ["* text=auto"],
-    // });
+    this.updateRootPixiForPackage(pkg.packageName, pkg.pythonPackage);
 
-    // .gitignore
-    new TextFile(this, `${pkgPath}/.gitignore`, {
-      lines: ["__pycache__/", "*.pyc", ".envrc.local"],
-    });
+    return pkg;
+  }
 
-    // pixi.toml
-    new TextFile(this, `${pkgPath}/pixi.toml`, {
-      lines: [
-        "[workspace]",
-        'channels = ["conda-forge"]',
-        'platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]',
-        'preview = ["pixi-build"]',
-        "",
-        "[package]",
-        'name = "dsomega_logging"',
-        'version = "0.1.0"',
-        "",
-        "[package.build]",
-        'backend = { name = "pixi-build-python", version = "0.*" }',
-        "",
-        "[package.host-dependencies]",
-        'setuptools = ">=70.0.0"',
-      ],
-    });
+  private updateRootPixiForPackage(packageDirName: string, pythonPackageName: string) {
+    // Get current content of pixi.toml
+    const content = this.rootPixiToml.obj as any;
 
-    // pyproject.toml
-    new TextFile(this, `${pkgPath}/pyproject.toml`, {
-      lines: [
-        "[build-system]",
-        'requires = ["setuptools>=70.0.0", "wheel"]',
-        'build-backend = "setuptools.build_meta"',
-      ],
-    });
+    // Ensure feature and environment sections exist
+    if (!content.feature) content.feature = {};
+    if (!content.environment) content.environment = {};
 
-    // setup.cfg
-    new TextFile(this, `${pkgPath}/setup.cfg`, {
-      lines: [
-        "[metadata]",
-        "name = dsomega_logging",
-        "description = Python logging utilities",
-        "version = 0.1.0",
-        "author = DeadlySquad13",
-        "license = MIT",
-        "license_file = LICENSE",
-        "platforms = unix, linux, osx, cygwin, win32",
-        "classifiers =",
-        "    Programming Language :: Python :: 3.14.0",
-        "",
-        "[options]",
-        "packages = find:",
-        "install_requires =",
-        "    rich>=13.0.0",
-        "python_requires = >=3.14",
-        "package_dir =",
-        "    =src",
-        "zip_safe = no",
-        "",
-        "[options.packages.find]",
-        "where=src",
-        "",
-        "[options.package_data]",
-        "find = py.typed",
-        "",
-        "[flake8]",
-        "max-line-length = 100",
-      ],
-    });
+    const featureName = packageDirName; // e.g., "common"
 
-    // Source files
-    new SampleDir(this, `${pkgPath}/src/dsomega_logging`, {
-      files: {
-        "__init__.py": "",
-        "console.py": [
-          "import logging",
-          "from rich.console import Console",
-          "from rich.logging import RichHandler",
-          "",
-          "def setup_rich_logging():",
-          "    console = Console()",
-          "    logging.basicConfig(",
-          "        level=logging.INFO,",
-          '        format="%(message)s",',
-          "        handlers=[RichHandler(console=console)]",
-          "    )",
-        ].join("\n"),
-        "main.py": [
-          "from datetime import datetime",
-          "import logging",
-          "",
-          "def date_iso() -> str:",
-          '    """Return current date in ISO format."""',
-          "    return datetime.now().isoformat()",
-          "",
-          "",
-          "def get_logger(name: str):",
-          '    """Get a logger with the given name."""',
-          "    return logging.getLogger(name)",
-        ].join("\n"),
-      },
-    });
+    // Add feature.<package>.dependencies and pypi-dependencies if not exist
+    content.feature[featureName] = content.feature[featureName] || {};
+    const feature = content.feature[featureName];
+    feature.dependencies = feature.dependencies || {};
+    feature['pypi-dependencies'] = feature['pypi-dependencies'] || {};
+    feature['pypi-dependencies'][pythonPackageName] = {
+      path: `./packages/${packageDirName}`,
+      editable: true,
+    };
+    feature.activation = feature.activation || {};
+    feature.activation.env = feature.activation.env || {};
+    feature.activation.env.PACKAGE_DIR = `packages/${packageDirName}`;
+    feature.tasks = feature.tasks || {};
+
+    // Add environment entries for this package
+    const envName = packageDirName;
+    const devEnvName = `${packageDirName}-dev`;
+    content.environment[envName] = {
+      features: [featureName],
+      'solve-group': featureName,
+    };
+    content.environment[devEnvName] = {
+      features: [featureName, 'test', 'lint', 'pre-commit'],
+      'solve-group': featureName,
+    };
+
+    // Save updated object back to the file
+    this.rootPixiToml.obj = content;
   }
 }
