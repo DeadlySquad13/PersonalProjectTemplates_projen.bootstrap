@@ -6,7 +6,7 @@ import {
   javascript,
   typescript,
 } from "projen";
-import { NodeProject, YarnNodeLinker } from "projen/lib/javascript";
+import { NodeProject } from "projen/lib/javascript";
 const { TypeScriptJsxMode, TypeScriptModuleResolution } = javascript;
 import { TypeScriptProjectOptions } from "projen/lib/typescript";
 
@@ -26,7 +26,7 @@ class ReactViteSampleCode extends Component {
 /**
  * Type of a map mapping strings to some arbitrary type
  */
-export type Obj<T> = { [key: string]: T };
+type Obj<T> = { [key: string]: T };
 
 /**
  * Return whether the given value is an object
@@ -34,7 +34,7 @@ export type Obj<T> = { [key: string]: T };
  * Even though arrays and instances of classes technically are objects, we
  * usually want to treat them differently, so we return false in those cases.
  */
-export function isObject(x: any): x is Obj<any> {
+function isObject(x: any): x is Obj<any> {
   return (
     x !== null &&
     typeof x === "object" &&
@@ -53,7 +53,7 @@ export function isObject(x: any): x is Obj<any> {
  *
  * `undefined`s will cause a value to be deleted if destructive is enabled.
  */
-export function deepMerge(
+function deepMerge(
   objects: Array<Obj<any> | undefined>,
   destructive: boolean = false
 ) {
@@ -110,7 +110,7 @@ export function deepMerge(
 
 export interface ViteProjectOptions extends TypeScriptProjectOptions {}
 
-class ViteConfig extends FileBase {
+export class ViteConfig extends FileBase {
   // eslint-disable-next-line no-unused-vars
   protected synthesizeContent(_resolver: IResolver): string | undefined {
     return [
@@ -154,7 +154,7 @@ export class ViteComponent extends Component {
   }
 }
 
-class ViteProject extends typescript.TypeScriptProject {
+export class ViteProject extends typescript.TypeScriptProject {
   constructor(options: ViteProjectOptions) {
     const defaultOptions: Partial<TypeScriptProjectOptions> = {
       tsconfig: {
@@ -222,6 +222,10 @@ class ViteProject extends typescript.TypeScriptProject {
   }
 }
 
+/* EXAMPLE:
+import { YarnNodeLinker } from "projen/lib/javascript";
+import { ViteProject } from "@dsomega-bootstrap/projen";
+
 const project = new ViteProject({
   defaultReleaseBranch: "main",
   name: "projen-vite",
@@ -233,14 +237,15 @@ const project = new ViteProject({
   },
   prettier: true,
   projenrcTs: true,
+  // The "name" in package.json.
+  // packageName: undefined,
+  // The description is just a string that helps people understand the purpose of the package.
+  // description: undefined,
 
-  // packageName: undefined,  /* The "name" in package.json. */
-  // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
-
-  /* Runtime dependencies of this module. */
+  // Runtime dependencies of this module.
   deps: ["konva", "react-konva"],
 
-  /* Build dependencies for this module. */
+  // Build dependencies for this module.
   devDeps: ["tsx"],
 });
 
@@ -260,4 +265,4 @@ if (installCiTask) {
 
 project.gitignore.addPatterns(".direnv");
 
-project.synth();
+project.synth(); */
