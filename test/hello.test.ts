@@ -1,7 +1,7 @@
 const printHello = () => {
-  return "Hello, world!"
-}
+	return "Hello, world!";
+};
 
-test('hello', () => {
-  expect(printHello()).toBe('Hello, world!');
+test("hello", () => {
+	expect(printHello()).toBe("Hello, world!");
 });

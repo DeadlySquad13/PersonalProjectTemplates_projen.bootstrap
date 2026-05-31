@@ -9,7 +9,10 @@
   "files": {
     "ignoreUnknown": false,
     "includes": [
-      "**",
+      "src/**",
+      "test/**",
+      ".projenrc.ts",
+      "projenrc/**",
       "!.devcontainer.json",
       "!.gitattributes",
       "!.github/workflows/build.yml",
@@ -19,7 +22,6 @@
       "!.gitignore",
       "!.gitpod.yml",
       "!.mergify.yml",
-      "!.prettierignore",
       "!.projen/deps.json",
       "!.projen/files.json",
       "!.projen/tasks.json",
