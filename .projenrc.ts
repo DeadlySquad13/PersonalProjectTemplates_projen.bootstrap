@@ -38,8 +38,15 @@ const project = new cdk.JsiiProject({
   //     allowedUsernames: ["DeadlySquad13-automation"],
   // },
 
-  deps: ["projen@0.87.4"],
-  peerDeps: ["projen@0.87.4"],
+  // INFO: Duplicated projen and constructs in both deps and peerDeps to prevent packages collisions.
+  deps: ["projen@0.87.4", "constructs@^10.0.0"],
+  peerDeps: ["projen@0.87.4", "constructs@^10.0.0"],
+  peerDependencyOptions: {
+    // INFO: `NodeProject` always adds `constructs@^10.0.0` as a BUILD (dev) dep.
+    // This means the pinned mechanism's skip condition (`hasRuntime && !hasBuild`) can never fire for `constructs`,
+    // so it always adds a pinned version (`10.0.0`), which collides with the resolved `10.3.0`.
+    pinnedDevDependency: false,
+  },
   devDeps: ["@typescript-eslint/parser"],
 
   gitignore: [
