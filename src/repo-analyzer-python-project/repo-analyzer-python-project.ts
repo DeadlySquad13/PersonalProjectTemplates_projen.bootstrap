@@ -22,8 +22,8 @@ export class RepoAnalyzerPython extends cdk.JsiiProject {
     super({
       ...options,
       readme: {
-        filename: "readme.md",
-        contents: "Test readme",
+        filename: "README.md",
+        contents: "# Repo Analyzer Python",
       },
       defaultReleaseBranch: "main",
       gitpod: true,
