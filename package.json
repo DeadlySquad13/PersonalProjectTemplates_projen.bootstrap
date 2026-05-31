@@ -1,9 +1,9 @@
 {
-  "name": "projen-python-project",
-  "description": "Projen project type for Repo Analyzer python projects",
+  "name": "@dsomega-boostrap/projen",
+  "description": "Projen project types for easy project bootstrapping",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RepoAnalyzer/projen-python-project.git"
+    "url": "https://github.com/DeadlySquad13/PersonalProjectTemplates_projen.bootstrap"
   },
   "scripts": {
     "build": "npx projen build",
@@ -74,7 +74,6 @@
     "project",
     "projen",
     "python",
-    "repo analyzer",
     "sdk",
     "template"
   ],
