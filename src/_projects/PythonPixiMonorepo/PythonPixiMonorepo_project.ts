@@ -10,14 +10,9 @@ import {
 import { NodeProject } from "projen/lib/javascript";
 
 /**
- * Options for a Pixi package.
+ * Shared optional fields for a Pixi package.
  */
-export interface PixiPackageOptions {
-  /**
-   * Name of the package (used for directory name and Python package name).
-   */
-  readonly name: string;
-
+export interface PixiPackageProps {
   /**
    * Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores.
    */
@@ -38,6 +33,21 @@ export interface PixiPackageOptions {
    */
   readonly sampleSrcFiles?: Record<string, string>;
 }
+
+/**
+ * Options for a Pixi package.
+ */
+export interface PixiPackageOptions extends PixiPackageProps {
+  /**
+   * Name of the package (used for directory name and Python package name).
+   */
+  readonly name: string;
+}
+
+/**
+ * Options for adding a package to the monorepo.
+ */
+export interface AddPackageOptions extends PixiPackageProps {}
 
 /**
  * A component that generates files for a single Pixi package.
@@ -379,10 +389,7 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
   /**
    * Add a new package to the monorepo and update the root pixi.toml.
    */
-  public addPackage(
-    name: string,
-    options?: Partial<PixiPackageOptions>
-  ): PixiPackage {
+  public addPackage(name: string, options?: AddPackageOptions): PixiPackage {
     const pkg = new PixiPackage(this, {
       name,
       pythonPackage: options?.pythonPackage,
@@ -396,46 +403,52 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
     return pkg;
   }
 
+  /**
+   *
+   * Adds to root pixi.toml:
+   * ```toml
+   *   [feature.<packageDirName>.pypi-dependencies]
+   *   <pythonPackageName> = { path = "./packages/<packageDirName>", editable = true }
+   *
+   *   [feature.<packageDirName>.activation.env]
+   *   PACKAGE_DIR = "packages/<packageDirName>"
+   *
+   *   [environment.<packageDirName>]
+   *   features = ["<packageDirName>"]
+   *   solve-group = "<packageDirName>"
+   *
+   *   [environment.<packageDirName>-dev]
+   *   features = ["<packageDirName>", "test", "lint", "pre-commit"]
+   *   solve-group = "<packageDirName>"
+   * ```
+   */
   private updateRootPixiForPackage(
     packageDirName: string,
     pythonPackageName: string
   ) {
-    // Get current content of pixi.toml
-    const content = this.rootPixiToml.obj as any;
+    const featureName = packageDirName;
 
-    // Ensure feature and environment sections exist
-    if (!content.feature) content.feature = {};
-    if (!content.environment) content.environment = {};
+    this.rootPixiToml.addOverride(
+      `feature.${featureName}.pypi-dependencies.${pythonPackageName}`,
+      {
+        path: `./packages/${packageDirName}`,
+        editable: true,
+      }
+    );
 
-    const featureName = packageDirName; // e.g., "common"
+    this.rootPixiToml.addOverride(
+      `feature.${featureName}.activation.env.PACKAGE_DIR`,
+      `packages/${packageDirName}`
+    );
 
-    // Add feature.<package>.dependencies and pypi-dependencies if not exist
-    content.feature[featureName] = content.feature[featureName] || {};
-    const feature = content.feature[featureName];
-    feature.dependencies = feature.dependencies || {};
-    feature["pypi-dependencies"] = feature["pypi-dependencies"] || {};
-    feature["pypi-dependencies"][pythonPackageName] = {
-      path: `./packages/${packageDirName}`,
-      editable: true,
-    };
-    feature.activation = feature.activation || {};
-    feature.activation.env = feature.activation.env || {};
-    feature.activation.env.PACKAGE_DIR = `packages/${packageDirName}`;
-    feature.tasks = feature.tasks || {};
-
-    // Add environment entries for this package
-    const envName = packageDirName;
-    const devEnvName = `${packageDirName}-dev`;
-    content.environment[envName] = {
+    this.rootPixiToml.addOverride(`environment.${packageDirName}`, {
       features: [featureName],
       "solve-group": featureName,
-    };
-    content.environment[devEnvName] = {
+    });
+
+    this.rootPixiToml.addOverride(`environment.${packageDirName}-dev`, {
       features: [featureName, "test", "lint", "pre-commit"],
       "solve-group": featureName,
-    };
-
-    // Save updated object back to the file
-    this.rootPixiToml.obj = content;
+    });
   }
 }
