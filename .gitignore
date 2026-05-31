@@ -58,8 +58,8 @@ codecov.*
 !/src/
 /lib
 /dist/
-!/.eslintrc.json
 .jsii
 tsconfig.json
 !/docs/API.md
+!/biome.jsonc
 !/.projenrc.ts

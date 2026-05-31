@@ -38,8 +38,7 @@ const project = new cdk.JsiiProject({
   //     allowedUsernames: ["DeadlySquad13-automation"],
   // },
 
-  // INFO: Duplicated projen and constructs in both deps and peerDeps to prevent packages collisions.
-  deps: ["projen@^0.99"],
+  deps: [],
   peerDeps: ["projen@^0.99", "constructs@^10.0.0"],
   peerDependencyOptions: {
     // INFO: `NodeProject` always adds `constructs@^10.0.0` as a BUILD (dev) dep.
@@ -47,7 +46,7 @@ const project = new cdk.JsiiProject({
     // so it always adds a pinned version (`10.0.0`), which collides with the resolved `10.3.0`.
     pinnedDevDependency: false,
   },
-  devDeps: ["@typescript-eslint/parser"],
+  devDeps: [],
 
   gitignore: [
     ".pnp.*",
@@ -61,14 +60,10 @@ const project = new cdk.JsiiProject({
 
   docsDirectory: DOCS_ROOT,
   docgenFilePath: `${DOCS_ROOT}/API.md`,
+  eslint: false,
 });
 
-const eslint = javascript.Eslint.of(project);
-
-if (eslint) {
-  // Had lint errors (couldn't find root as far as I remember).
-  eslint.addExtends("eslint:recommended");
-}
+new javascript.Biome(project);
 
 project.docsDirectory;
 const mkdir = (relativePath: string) => {
