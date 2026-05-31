@@ -39,8 +39,8 @@ const project = new cdk.JsiiProject({
   // },
 
   // INFO: Duplicated projen and constructs in both deps and peerDeps to prevent packages collisions.
-  deps: ["projen@0.87.4", "constructs@^10.0.0"],
-  peerDeps: ["projen@0.87.4", "constructs@^10.0.0"],
+  deps: ["projen@^0.99"],
+  peerDeps: ["projen@^0.99", "constructs@^10.0.0"],
   peerDependencyOptions: {
     // INFO: `NodeProject` always adds `constructs@^10.0.0` as a BUILD (dev) dep.
     // This means the pinned mechanism's skip condition (`hasRuntime && !hasBuild`) can never fire for `constructs`,
