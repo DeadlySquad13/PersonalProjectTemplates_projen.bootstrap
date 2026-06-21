@@ -5,7 +5,7 @@ import {
 	SampleDir,
 	TextFile,
 	TomlFile,
-	YamlFile,
+	// YamlFile,
 } from "projen";
 import type { NodeProject } from "projen/lib/javascript";
 
@@ -211,24 +211,26 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 			},
 		});
 
-		new YamlFile(this, ".gitlab-ci.yml", {
-			obj: {
-				stages: ["test", "build"],
-				test: { stage: "test", script: ["pixi run test"] },
-			},
-		});
+		// TODO: Conflicts with already existing `.gitlab-ci.yml` that is
+		// passed by default.
+		// new YamlFile(this, ".gitlab-ci.yml", {
+		// 	obj: {
+		// 		stages: ["test", "build"],
+		// 		test: { stage: "test", script: ["pixi run test"] },
+		// 	},
+		// });
 
-		new YamlFile(this, ".pre-commit-config.yaml", {
-			obj: {
-				repos: [
-					{
-						repo: "https://github.com/pre-commit/pre-commit-hooks",
-						rev: "v4.5.0",
-						hooks: [{ id: "trailing-whitespace" }, { id: "end-of-file-fixer" }],
-					},
-				],
-			},
-		});
+		// new YamlFile(this, ".pre-commit-config.yaml", {
+		// 	obj: {
+		// 		repos: [
+		// 			{
+		// 				repo: "https://github.com/pre-commit/pre-commit-hooks",
+		// 				rev: "v4.5.0",
+		// 				hooks: [{ id: "trailing-whitespace" }, { id: "end-of-file-fixer" }],
+		// 			},
+		// 		],
+		// 	},
+		// });
 
 		new IniFile(this, "mypy.ini", {
 			obj: {
@@ -295,9 +297,10 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 			],
 		});
 
-		new TextFile(this, ".gitattributes", {
-			lines: ["* text=auto", "*.lock binary"],
-		});
+		// TODO: Conflicts with already existing `.gitattributes`.
+		// new TextFile(this, ".gitattributes", {
+		// 	lines: ["* text=auto", "*.lock binary"],
+		// });
 
 		new TextFile(this, ".nvim.lua", {
 			lines: [
