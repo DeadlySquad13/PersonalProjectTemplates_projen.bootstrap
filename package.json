@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2",
+    "@types/dedent": "1.7.2",
     "@types/jest": "^27",
     "@types/node": "^16 <= 16.18.78",
     "commit-and-tag-version": "^12",
@@ -56,6 +57,12 @@
     "constructs": "^10.0.0",
     "projen": "^0.99"
   },
+  "dependencies": {
+    "dedent": "1.7.2"
+  },
+  "bundledDependencies": [
+    "dedent"
+  ],
   "keywords": [
     "constructs",
     "project",

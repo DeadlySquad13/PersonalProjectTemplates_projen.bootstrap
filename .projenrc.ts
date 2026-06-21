@@ -41,6 +41,7 @@ const project = new cdk.JsiiProject({
 	// },
 
 	deps: [],
+	bundledDeps: ["dedent@1.7.2"],
 	peerDeps: ["projen@^0.99", "constructs@^10.0.0"],
 	peerDependencyOptions: {
 		// INFO: `NodeProject` always adds `constructs@^10.0.0` as a BUILD (dev) dep.
@@ -48,7 +49,7 @@ const project = new cdk.JsiiProject({
 		// so it always adds a pinned version (`10.0.0`), which collides with the resolved `10.3.0`.
 		pinnedDevDependency: false,
 	},
-	devDeps: [],
+	devDeps: ["@types/dedent@0.7.2"],
 
 	gitignore: [
 		".pnp.*",

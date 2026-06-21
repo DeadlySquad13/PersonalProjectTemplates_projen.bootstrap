@@ -1,3 +1,4 @@
+import dedent from "dedent";
 import {
 	Component,
 	cdk,
@@ -90,12 +91,14 @@ export class PixiPackage extends Component {
 				package: {
 					name: this.pythonPackage,
 					version: "0.1.0",
-				},
-				"package.build": {
-					backend: { name: "pixi-build-python", version: "0.*" },
-				},
-				"package.host-dependencies": {
-					setuptools: ">=70.0.0",
+
+					build: {
+						backend: { name: "pixi-build-python", version: "0.*" },
+					},
+
+					"host-dependencies": {
+						setuptools: ">=70.0.0",
+					},
 				},
 			},
 		});
@@ -111,7 +114,7 @@ export class PixiPackage extends Component {
 		});
 
 		// setup.cfg
-		new IniFile(project, `${pkgPath}/setup.cfg`, {
+		const setupCfg = new IniFile(project, `${pkgPath}/setup.cfg`, {
 			obj: {
 				metadata: {
 					name: this.pythonPackage,
@@ -119,28 +122,44 @@ export class PixiPackage extends Component {
 					version: "0.1.0",
 					author: "DeadlySquad13",
 					license: "MIT",
-					license_file: "LICENSE",
+					// license_file: "LICENSE",
 					platforms: "unix, linux, osx, cygwin, win32",
 					classifiers: ["Programming Language :: Python :: 3.14.0"],
 				},
 				options: {
 					packages: "find:",
-					install_requires: (options.installRequires ?? []).join("\n"),
-					python_requires: ">=3.14",
-					package_dir: "=src",
+					install_requires: options.installRequires,
+					python_requires: [">=3.14"],
+					package_dir: ["=src"],
 					zip_safe: "no",
-				},
-				"options.packages.find": {
-					where: "src",
-				},
-				"options.package_data": {
-					find: "py.typed",
+					package_data: {
+						find: "py.typed",
+					},
 				},
 				flake8: {
 					"max-line-length": "100",
 				},
+
+				"build-system": {
+					requires: ["setuptools"],
+					"build-backend": "setuptools.build_meta",
+				},
 			},
 		});
+
+		// biome-ignore lint/suspicious/noExplicitAny: ini issue, see [1], [2], [3].
+		const origSynth = (setupCfg as any).synthesizeContent.bind(setupCfg);
+		// biome-ignore lint/suspicious/noExplicitAny: ini issue, see [1], [2], [3].
+		(setupCfg as any).synthesizeContent = (resolver: any) => {
+			const content = origSynth(resolver);
+			if (content === undefined) return undefined;
+
+			return dedent`
+				${content}
+				[options.packages.find]
+				where = src
+			`;
+		};
 
 		// Sample source files (customizable)
 		const srcFiles = options.sampleSrcFiles ?? {
@@ -257,24 +276,43 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 		this.rootPixiToml = new TomlFile(this, "pixi.toml", {
 			obj: {
 				workspace: {
+					// channels: ["pytorch", "nvidia", "conda-forge"],
+					version: "0.1.0",
 					channels: ["conda-forge"],
 					platforms: ["linux-64", "osx-64", "osx-arm64", "win-64"],
-					preview: ["pixi-build"],
+					authors: [
+						"DeadlySquad13 <46250621+DeadlySquad13@users.noreply.github.com>",
+					],
 				},
-				"workspace.package": {
-					authors: ["DeadlySquad13"],
-					license: "MIT",
+				feature: {
+					test: {
+						tasks: { test: "pytest --rootdir=$PACKAGE_DIR" },
+						"pypi-dependencies": { pytest: ">=7.0.0,<9" },
+					},
+					lint: {
+						tasks: {
+							"lint-check": "flake8 src",
+
+							format: "black src",
+							"format-check": "black --check --diff src",
+
+							"types-check": "mypy src",
+
+							"order-imports": "isort src",
+							"order-imports-check": "isort --check --diff src",
+						},
+					},
+					"pre-commit": {
+						tasks: { "pre-commit-check": "pre-commit run --all-files" },
+						// QUESTION: For some reason commented in Pythno_lib
+						// pypi-dependencies = { Python_lib = { path = "./", editable = true }, pre-commit = "==3.7.0" }
+					},
 				},
-				"workspace.tasks": {
-					test: "pytest",
-					lint: "pre-commit run --all-files",
-				},
-				"workspace.dependencies": {
+
+				dependencies: {
 					python: "3.14.*",
-					pytest: ">=7.0.0,<9",
 				},
-				feature: {},
-				environment: {},
+				environments: {},
 			},
 		});
 
@@ -363,7 +401,7 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 		// Create an initial example package
 		this.addPackage("common", {
 			description: "Common utilities",
-			installRequires: ["tqdm>=4.67.3,<5"],
+			// installRequires: ["tqdm>=4.67.3,<5"],
 			sampleSrcFiles: {
 				"__init__.py": "",
 				"main.py": `import logging\nfrom rich.logging import RichHandler\n\ndef hello_world():\n    logging.basicConfig(level=logging.INFO, handlers=[RichHandler()])\n    logging.info("Hello from common")\n    return "Hello World!"\n`,
@@ -417,11 +455,11 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 	 *   [feature.<packageDirName>.activation.env]
 	 *   PACKAGE_DIR = "packages/<packageDirName>"
 	 *
-	 *   [environment.<packageDirName>]
+	 *   [environments.<packageDirName>]
 	 *   features = ["<packageDirName>"]
 	 *   solve-group = "<packageDirName>"
 	 *
-	 *   [environment.<packageDirName>-dev]
+	 *   [environments.<packageDirName>-dev]
 	 *   features = ["<packageDirName>", "test", "lint", "pre-commit"]
 	 *   solve-group = "<packageDirName>"
 	 * ```
@@ -432,27 +470,33 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 	) {
 		const featureName = packageDirName;
 
-		this.rootPixiToml.addOverride(
-			`feature.${featureName}.pypi-dependencies.${pythonPackageName}`,
-			{
+		this.rootPixiToml.addOverride(`feature.${featureName}.pypi-dependencies`, {
+			[pythonPackageName]: {
 				path: `./packages/${packageDirName}`,
 				editable: true,
 			},
-		);
+		});
 
 		this.rootPixiToml.addOverride(
 			`feature.${featureName}.activation.env.PACKAGE_DIR`,
 			`packages/${packageDirName}`,
 		);
 
-		this.rootPixiToml.addOverride(`environment.${packageDirName}`, {
+		this.rootPixiToml.addOverride(`environments.${packageDirName}`, {
 			features: [featureName],
 			"solve-group": featureName,
 		});
 
-		this.rootPixiToml.addOverride(`environment.${packageDirName}-dev`, {
+		this.rootPixiToml.addOverride(`environments.${packageDirName}-dev`, {
 			features: [featureName, "test", "lint", "pre-commit"],
 			"solve-group": featureName,
 		});
 	}
 }
+
+/**
+ * References:
+ * [1]: <https://github.com/projen/projen/issues/2749> 'Ini npm package github issue about escaping dots in Projen'
+ * [2]: <https://github.com/npm/ini/issues/30> 'Ini npm package github issue about slashes'
+ * [3]: <logseq://graph/Notes?block-id=6a37d961-3dfe-4ae9-aacb-eabe4586fc3a> 'Explanation about conflicting keys in setuptools'
+ */
