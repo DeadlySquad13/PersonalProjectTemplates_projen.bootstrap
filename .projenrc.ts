@@ -41,7 +41,7 @@ const project = new cdk.JsiiProject({
 	// },
 
 	deps: [],
-	bundledDeps: ["dedent@1.7.2"],
+	bundledDeps: ["dedent@1.7.2", "fp-ts@2.16.11"],
 	peerDeps: ["projen@^0.99", "constructs@^10.0.0"],
 	peerDependencyOptions: {
 		// INFO: `NodeProject` always adds `constructs@^10.0.0` as a BUILD (dev) dep.

@@ -6,6 +6,11 @@
       "type": "build"
     },
     {
+      "name": "@types/dedent",
+      "version": "0.7.2",
+      "type": "build"
+    },
+    {
       "name": "@types/jest",
       "type": "build"
     },
@@ -70,6 +75,16 @@
     {
       "name": "typescript",
       "type": "build"
+    },
+    {
+      "name": "dedent",
+      "version": "1.7.2",
+      "type": "bundled"
+    },
+    {
+      "name": "fp-ts",
+      "version": "2.16.11",
+      "type": "bundled"
     },
     {
       "name": "constructs",
