@@ -10,6 +10,7 @@ import {
 } from "projen";
 import type { NodeProject } from "projen/lib/javascript";
 import { installRequiresToPixiDeps } from "../../_lib/Pixi/pixi.utils";
+import { pythonGitignore } from "../../_lib/Python/gitignore";
 
 /**
  * Shared optional fields for a Pixi package.
@@ -221,6 +222,7 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 	constructor(options: PythonPixiMonorepoProjectOptions) {
 		super({
 			...options,
+			gitignore: [...pythonGitignore, ...(options.gitignore || [])],
 			readme: { filename: "README.md", contents: "# Python Monorepo" },
 			defaultReleaseBranch: "main",
 			gitpod: true,
