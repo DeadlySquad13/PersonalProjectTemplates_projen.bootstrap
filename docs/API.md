@@ -42,6 +42,7 @@ new PixiPackage(project: NodeProject, options: PixiPackageOptions)
 | <code><a href="#@dsomega-boostrap/projen.PixiPackage.postSynthesize">postSynthesize</a></code> | Called after synthesis. |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackage.preSynthesize">preSynthesize</a></code> | Called before synthesis. |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackage.synthesize">synthesize</a></code> | Synthesizes files to the project output directory. |
+| <code><a href="#@dsomega-boostrap/projen.PixiPackage.getPythonMonorepoPackageName">getPythonMonorepoPackageName</a></code> | *No description.* |
 
 ---
 
@@ -99,6 +100,20 @@ public synthesize(): void
 ```
 
 Synthesizes files to the project output directory.
+
+##### `getPythonMonorepoPackageName` <a name="getPythonMonorepoPackageName" id="@dsomega-boostrap/projen.PixiPackage.getPythonMonorepoPackageName"></a>
+
+```typescript
+public getPythonMonorepoPackageName(packageName: string): string
+```
+
+###### `packageName`<sup>Required</sup> <a name="packageName" id="@dsomega-boostrap/projen.PixiPackage.getPythonMonorepoPackageName.parameter.packageName"></a>
+
+- *Type:* string
+
+name of the package inside `packages/*`.
+
+---
 
 #### Static Functions <a name="Static Functions" id="Static Functions"></a>
 
@@ -5335,7 +5350,7 @@ const addPackageOptions: AddPackageOptions = { ... }
 | --- | --- | --- |
 | <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.description">description</a></code> | <code>string</code> | Package description. |
 | <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.installRequires">installRequires</a></code> | <code>string[]</code> | Additional Python dependencies (for setup.cfg install_requires). |
-| <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.pythonPackage">pythonPackage</a></code> | <code>string</code> | Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores. |
+| <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.pythonPackage">pythonPackage</a></code> | <code>string</code> | Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores and `dsomega_` prefix. |
 | <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.sampleSrcFiles">sampleSrcFiles</a></code> | <code>{[ key: string ]: string}</code> | Additional content to generate in the src/ directory. |
 
 ---
@@ -5372,7 +5387,7 @@ public readonly pythonPackage: string;
 
 - *Type:* string
 
-Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores.
+Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores and `dsomega_` prefix.
 
 ---
 
@@ -5406,7 +5421,7 @@ const pixiPackageOptions: PixiPackageOptions = { ... }
 | --- | --- | --- |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackageOptions.property.description">description</a></code> | <code>string</code> | Package description. |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackageOptions.property.installRequires">installRequires</a></code> | <code>string[]</code> | Additional Python dependencies (for setup.cfg install_requires). |
-| <code><a href="#@dsomega-boostrap/projen.PixiPackageOptions.property.pythonPackage">pythonPackage</a></code> | <code>string</code> | Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores. |
+| <code><a href="#@dsomega-boostrap/projen.PixiPackageOptions.property.pythonPackage">pythonPackage</a></code> | <code>string</code> | Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores and `dsomega_` prefix. |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackageOptions.property.sampleSrcFiles">sampleSrcFiles</a></code> | <code>{[ key: string ]: string}</code> | Additional content to generate in the src/ directory. |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackageOptions.property.name">name</a></code> | <code>string</code> | Name of the package (used for directory name and Python package name). |
 
@@ -5444,7 +5459,7 @@ public readonly pythonPackage: string;
 
 - *Type:* string
 
-Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores.
+Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores and `dsomega_` prefix.
 
 ---
 
@@ -5490,7 +5505,7 @@ const pixiPackageProps: PixiPackageProps = { ... }
 | --- | --- | --- |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackageProps.property.description">description</a></code> | <code>string</code> | Package description. |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackageProps.property.installRequires">installRequires</a></code> | <code>string[]</code> | Additional Python dependencies (for setup.cfg install_requires). |
-| <code><a href="#@dsomega-boostrap/projen.PixiPackageProps.property.pythonPackage">pythonPackage</a></code> | <code>string</code> | Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores. |
+| <code><a href="#@dsomega-boostrap/projen.PixiPackageProps.property.pythonPackage">pythonPackage</a></code> | <code>string</code> | Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores and `dsomega_` prefix. |
 | <code><a href="#@dsomega-boostrap/projen.PixiPackageProps.property.sampleSrcFiles">sampleSrcFiles</a></code> | <code>{[ key: string ]: string}</code> | Additional content to generate in the src/ directory. |
 
 ---
@@ -5527,7 +5542,7 @@ public readonly pythonPackage: string;
 
 - *Type:* string
 
-Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores.
+Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores and `dsomega_` prefix.
 
 ---
 
