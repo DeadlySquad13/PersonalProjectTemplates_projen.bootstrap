@@ -9,13 +9,14 @@ import {
 	// YamlFile,
 } from "projen";
 import type { NodeProject } from "projen/lib/javascript";
+import { installRequiresToPixiDeps } from "../../_lib/Pixi/pixi.utils";
 
 /**
  * Shared optional fields for a Pixi package.
  */
 export interface PixiPackageProps {
 	/**
-	 * Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores.
+	 * Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores and `dsomega_` prefix.
 	 */
 	readonly pythonPackage?: string;
 
@@ -57,12 +58,22 @@ export class PixiPackage extends Component {
 	public readonly packageName: string;
 	public readonly pythonPackage: string;
 
+	/**
+	 * @param packageName - name of the package inside `packages/*`.
+	 * @returns Name of the monorepo package that will be actually installed as
+	 * editable python package.
+	 */
+	getPythonMonorepoPackageName(packageName: string) {
+		return `dsomega_${packageName.replace(/-/g, "_")}`;
+	}
+
 	constructor(project: NodeProject, options: PixiPackageOptions) {
 		super(project);
 
 		this.packageName = options.name;
 		this.pythonPackage =
-			options.pythonPackage ?? this.packageName.replace(/-/g, "_");
+			options.pythonPackage ??
+			this.getPythonMonorepoPackageName(this.packageName);
 
 		const pkgPath = `packages/${this.packageName}`;
 
@@ -440,13 +451,16 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 			sampleSrcFiles: options?.sampleSrcFiles,
 		});
 
-		this.updateRootPixiForPackage(pkg.packageName, pkg.pythonPackage);
+		this.updateRootPixiForPackage(
+			pkg.packageName,
+			pkg.pythonPackage,
+			options?.installRequires,
+		);
 
 		return pkg;
 	}
 
 	/**
-	 *
 	 * Adds to root pixi.toml:
 	 * ```toml
 	 *   [feature.<packageDirName>.pypi-dependencies]
@@ -463,15 +477,34 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 	 *   features = ["<packageDirName>", "test", "lint", "pre-commit"]
 	 *   solve-group = "<packageDirName>"
 	 * ```
+	 * @param packageDirName - name of the package inside `packages/*`.
+	 * @param pythonMonoperoPackageName - Name of the monorepo package that will be actually installed as
+	 * editable python package. Should be different from packageDirName
+	 * (otherwise pixi and python would throw ModuleNotFound because packages
+	 * are confused between each other).
 	 */
 	private updateRootPixiForPackage(
 		packageDirName: string,
-		pythonPackageName: string,
+		pythonMonoperoPackageName: string,
+		installRequires?: string[],
 	) {
+		if (packageDirName === pythonMonoperoPackageName) {
+			throw new Error(
+				`Parameters 'packageDirName' and 'pythonMonoperoPackageName' should be different (otherwise pixi and python would throw ModuleNotFound because packages are confused between each other)`,
+			);
+		}
+
 		const featureName = packageDirName;
 
+		if (installRequires) {
+			this.rootPixiToml.addOverride(
+				`feature.${featureName}.dependencies`,
+				installRequiresToPixiDeps(installRequires),
+			);
+		}
+
 		this.rootPixiToml.addOverride(`feature.${featureName}.pypi-dependencies`, {
-			[pythonPackageName]: {
+			[pythonMonoperoPackageName]: {
 				path: `./packages/${packageDirName}`,
 				editable: true,
 			},
