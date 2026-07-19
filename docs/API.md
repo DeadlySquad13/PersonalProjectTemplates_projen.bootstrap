@@ -5352,6 +5352,8 @@ const addPackageOptions: AddPackageOptions = { ... }
 | <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.installRequires">installRequires</a></code> | <code>string[]</code> | Additional Python dependencies (for setup.cfg install_requires). |
 | <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.pythonPackage">pythonPackage</a></code> | <code>string</code> | Python package name (e.g., "dsomega_logging"). Defaults to name with dashes replaced by underscores and `dsomega_` prefix. |
 | <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.sampleSrcFiles">sampleSrcFiles</a></code> | <code>{[ key: string ]: string}</code> | Additional content to generate in the src/ directory. |
+| <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.taskOptions">taskOptions</a></code> | <code><a href="#@dsomega-boostrap/projen.TaskOptions">TaskOptions</a></code> | *No description.* |
+| <code><a href="#@dsomega-boostrap/projen.AddPackageOptions.property.tasks">tasks</a></code> | <code>{[ key: string ]: string}</code> | name, task defition. |
 
 ---
 
@@ -5400,6 +5402,69 @@ public readonly sampleSrcFiles: {[ key: string ]: string};
 - *Type:* {[ key: string ]: string}
 
 Additional content to generate in the src/ directory.
+
+---
+
+##### `taskOptions`<sup>Optional</sup> <a name="taskOptions" id="@dsomega-boostrap/projen.AddPackageOptions.property.taskOptions"></a>
+
+```typescript
+public readonly taskOptions: TaskOptions;
+```
+
+- *Type:* <a href="#@dsomega-boostrap/projen.TaskOptions">TaskOptions</a>
+
+---
+
+##### `tasks`<sup>Optional</sup> <a name="tasks" id="@dsomega-boostrap/projen.AddPackageOptions.property.tasks"></a>
+
+```typescript
+public readonly tasks: {[ key: string ]: string};
+```
+
+- *Type:* {[ key: string ]: string}
+
+name, task defition.
+
+---
+
+### AddPackageTaskOptions <a name="AddPackageTaskOptions" id="@dsomega-boostrap/projen.AddPackageTaskOptions"></a>
+
+#### Initializer <a name="Initializer" id="@dsomega-boostrap/projen.AddPackageTaskOptions.Initializer"></a>
+
+```typescript
+import { AddPackageTaskOptions } from '@dsomega-boostrap/projen'
+
+const addPackageTaskOptions: AddPackageTaskOptions = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#@dsomega-boostrap/projen.AddPackageTaskOptions.property.taskOptions">taskOptions</a></code> | <code><a href="#@dsomega-boostrap/projen.TaskOptions">TaskOptions</a></code> | *No description.* |
+| <code><a href="#@dsomega-boostrap/projen.AddPackageTaskOptions.property.tasks">tasks</a></code> | <code>{[ key: string ]: string}</code> | name, task defition. |
+
+---
+
+##### `taskOptions`<sup>Optional</sup> <a name="taskOptions" id="@dsomega-boostrap/projen.AddPackageTaskOptions.property.taskOptions"></a>
+
+```typescript
+public readonly taskOptions: TaskOptions;
+```
+
+- *Type:* <a href="#@dsomega-boostrap/projen.TaskOptions">TaskOptions</a>
+
+---
+
+##### `tasks`<sup>Optional</sup> <a name="tasks" id="@dsomega-boostrap/projen.AddPackageTaskOptions.property.tasks"></a>
+
+```typescript
+public readonly tasks: {[ key: string ]: string};
+```
+
+- *Type:* {[ key: string ]: string}
+
+name, task defition.
 
 ---
 
@@ -10873,6 +10938,35 @@ public readonly contactEmail: string;
 - *Default:* `project.authorAddress`
 
 What e-mail address to list for the Code of Conduct Point of Contact.
+
+---
+
+### TaskOptions <a name="TaskOptions" id="@dsomega-boostrap/projen.TaskOptions"></a>
+
+#### Initializer <a name="Initializer" id="@dsomega-boostrap/projen.TaskOptions.Initializer"></a>
+
+```typescript
+import { TaskOptions } from '@dsomega-boostrap/projen'
+
+const taskOptions: TaskOptions = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#@dsomega-boostrap/projen.TaskOptions.property.includeRunMainTask">includeRunMainTask</a></code> | <code>boolean</code> | *No description.* |
+
+---
+
+##### `includeRunMainTask`<sup>Optional</sup> <a name="includeRunMainTask" id="@dsomega-boostrap/projen.TaskOptions.property.includeRunMainTask"></a>
+
+```typescript
+public readonly includeRunMainTask: boolean;
+```
+
+- *Type:* boolean
+- *Default:* true
 
 ---
 

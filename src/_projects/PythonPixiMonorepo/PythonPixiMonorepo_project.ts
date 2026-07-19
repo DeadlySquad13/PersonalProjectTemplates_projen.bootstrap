@@ -1,4 +1,6 @@
 import dedent from "dedent";
+import { identity, pipe } from "fp-ts/lib/function";
+import * as R from "fp-ts/Record";
 import {
 	Component,
 	cdk,
@@ -47,10 +49,27 @@ export interface PixiPackageOptions extends PixiPackageProps {
 	readonly name: string;
 }
 
+export interface TaskOptions {
+	/**
+	 * @default true
+	 */
+	readonly includeRunMainTask?: boolean;
+}
+
+export interface AddPackageTaskOptions {
+	/**
+	 * name, task defition
+	 */
+	readonly tasks?: Record<string, string>;
+	readonly taskOptions?: TaskOptions;
+}
+
 /**
  * Options for adding a package to the monorepo.
  */
-export interface AddPackageOptions extends PixiPackageProps {}
+export interface AddPackageOptions
+	extends PixiPackageProps,
+		AddPackageTaskOptions {}
 
 /**
  * A component that generates files for a single Pixi package.
@@ -428,6 +447,7 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 			receiveArgs: true,
 		});
 
+		// TODO:
 		// Create the script file
 		new TextFile(this, "scripts/add-package.js", {
 			lines: [
@@ -453,13 +473,46 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 			sampleSrcFiles: options?.sampleSrcFiles,
 		});
 
-		this.updateRootPixiForPackage(
-			pkg.packageName,
-			pkg.pythonPackage,
-			options?.installRequires,
-		);
+		this.updateRootPixiForPackage(pkg.packageName, pkg.pythonPackage, options);
 
 		return pkg;
+	}
+
+	/**
+	 * Override pixi.toml with tasks for package.
+	 *
+	 * For package `artifact-aggregator` will add:
+	 * ```toml
+	 * [feature.artifact-aggregator.tasks]
+	 * run-artifact-aggregator = "python -m dsomega_artifact_aggregator.main"
+	 * ```
+	 * if:
+	 * - `featureName = 'artifact-aggregator'`
+	 * - `pythonMonoperoPackageName = 'dsomega_artifact_aggregator'`
+	 * - and no `tasks` or `taskOptions` are provided.
+	 */
+	protected addTasks(
+		featureName: string,
+		pythonMonoperoPackageName: string,
+		{ tasks, taskOptions }: AddPackageTaskOptions,
+	) {
+		const includeRunMainTask = taskOptions?.includeRunMainTask ?? true;
+
+		const runMain = `python -m ${pythonMonoperoPackageName}.main`;
+
+		const packageTasks = pipe(
+			{},
+			includeRunMainTask ? R.upsertAt(`run-${featureName}`, runMain) : identity,
+			tasks && !R.isEmpty(tasks)
+				? (current) => ({ ...current, ...tasks })
+				: identity,
+		);
+		if (R.size(packageTasks)) {
+			this.rootPixiToml.addOverride(
+				`feature.${featureName}.tasks`,
+				packageTasks,
+			);
+		}
 	}
 
 	/**
@@ -488,7 +541,7 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 	private updateRootPixiForPackage(
 		packageDirName: string,
 		pythonMonoperoPackageName: string,
-		installRequires?: string[],
+		{ installRequires, tasks, taskOptions }: AddPackageOptions = {},
 	) {
 		if (packageDirName === pythonMonoperoPackageName) {
 			throw new Error(
@@ -516,6 +569,11 @@ export class PythonPixiMonorepo extends cdk.JsiiProject {
 			`feature.${featureName}.activation.env.PACKAGE_DIR`,
 			`packages/${packageDirName}`,
 		);
+
+		this.addTasks(featureName, pythonMonoperoPackageName, {
+			tasks,
+			taskOptions,
+		});
 
 		this.rootPixiToml.addOverride(`environments.${packageDirName}`, {
 			features: [featureName],
